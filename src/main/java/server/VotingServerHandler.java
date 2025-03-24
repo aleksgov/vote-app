@@ -2,9 +2,11 @@ package server;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import commands.LoginCommand;
-import commands.CreateCommand;
+import commands.Command;
+import commands.CreateTopicCommand;
+import commands.CreateVoteCommand;
 import commands.ViewCommand;
+import commands.LoginCommand;
 
 import java.util.*;
 
@@ -16,6 +18,15 @@ public class VotingServerHandler extends SimpleChannelInboundHandler<String> {
 
     private String currentUser = null;
     private VoteCreationManager voteCreationManager = null;
+
+    private Map<String, Command> commandMap = new HashMap<>();
+
+    public VotingServerHandler() {
+        commandMap.put("login", new LoginCommand());
+        commandMap.put("view", new ViewCommand());
+        commandMap.put("create topic", new CreateTopicCommand());
+        commandMap.put("create vote", new CreateVoteCommand());
+    }
 
     public void setCurrentUser(String currentUser) {
         this.currentUser = currentUser;
@@ -43,21 +54,23 @@ public class VotingServerHandler extends SimpleChannelInboundHandler<String> {
         }
         String mainCommand = parts[0];
 
-        switch (mainCommand) {
-            case "login":
-                LoginCommand.execute(ctx, parts, this);
-                break;
-
-            case "create":
-                CreateCommand.execute(ctx, parts, this);
-                break;
-
-            case "view":
-                ViewCommand.execute(ctx, parts);
-                break;
-
-            default:
+        if (mainCommand.equals("create")) {
+            if (parts.length >= 2) {
+                String subCommandType = parts[1];
+                Command command = commandMap.get("create " + subCommandType);
+                if (command != null) {
+                    command.execute(ctx, parts, this);
+                } else {
+                    ctx.writeAndFlush("Неверная команда create. Используйте: create topic или create vote");
+                }
+            }
+        } else {
+            Command command = commandMap.get(mainCommand);
+            if (command != null) {
+                command.execute(ctx, parts, this);
+            } else {
                 ctx.writeAndFlush("Неизвестная команда.");
+            }
         }
     }
 }
