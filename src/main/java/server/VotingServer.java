@@ -100,7 +100,7 @@ public class VotingServer {
         System.exit(0);
     }
 
-    private static void startTcpServer() throws InterruptedException {
+    static void startTcpServer() throws InterruptedException {
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
         EventLoopGroup workerGroup = new NioEventLoopGroup();
 
