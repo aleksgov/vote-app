@@ -1,9 +1,13 @@
 package server;
 
 import commands.*;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.socket.DatagramPacket;
+import io.netty.util.CharsetUtil;
 
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -13,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class VotingServerHandler extends SimpleChannelInboundHandler<String> {
+public class VotingServerHandler extends SimpleChannelInboundHandler<DatagramPacket> {
 
     public static volatile Map<String, List<String>> topics = new ConcurrentHashMap<>();
     public static volatile Map<String, List<Vote>> votesByTopic = new ConcurrentHashMap<>();
@@ -68,12 +72,19 @@ public class VotingServerHandler extends SimpleChannelInboundHandler<String> {
         return tokens.toArray(new String[0]);
     }
 
-    private void handleExitCommand(ChannelHandlerContext ctx) {
+    public void sendResponse(ChannelHandlerContext ctx, InetSocketAddress recipient, String message) {
+        ctx.writeAndFlush(new DatagramPacket(
+                Unpooled.copiedBuffer(message, CharsetUtil.UTF_8),
+                recipient
+        ));
+    }
+
+    private void handleExitCommand(ChannelHandlerContext ctx, InetSocketAddress sender) {
         if (currentUser != null) {
-            loggedUsers.remove(currentUser); // Удаляем из авторизованных
-            currentUser = null; // Сбрасываем текущего пользователя
+            loggedUsers.remove(currentUser);
+            currentUser = null;
         }
-        ctx.writeAndFlush("Завершение работы программы.");
+        sendResponse(ctx, sender, "Завершение работы программы.");
         ctx.close();
     }
 
@@ -87,7 +98,10 @@ public class VotingServerHandler extends SimpleChannelInboundHandler<String> {
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, String msg) {
+    protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket packet) {
+        String msg = packet.content().toString(CharsetUtil.UTF_8);
+        InetSocketAddress sender = packet.sender();
+
         if (voteCreationManager != null && voteCreationManager.isActive()) {
             voteCreationManager.processInput(ctx, msg, (vote, topic) -> {
                 votesByTopic.computeIfAbsent(topic, k -> new ArrayList<>()).add(vote);
@@ -95,7 +109,7 @@ public class VotingServerHandler extends SimpleChannelInboundHandler<String> {
                     v.add(vote.getTitle());
                     return v;
                 });
-                ctx.writeAndFlush("Голосование создано: " + vote);
+                sendResponse(ctx, sender, "Голосование создано: " + vote);
                 voteCreationManager = null;
             });
             return;
@@ -105,10 +119,10 @@ public class VotingServerHandler extends SimpleChannelInboundHandler<String> {
             Vote pendingVote = pendingVotes.get(currentUser);
             if (pendingVote.getOptionVotes().containsKey(msg)) {
                 pendingVote.addVote(msg, currentUser);
-                ctx.writeAndFlush("Ваш голос учтен.");
+                sendResponse(ctx, sender, "Ваш голос учтен.");
                 pendingVotes.remove(currentUser);
             } else {
-                ctx.writeAndFlush("Неизвестная команда.");
+                sendResponse(ctx, sender, "Неизвестная команда.");
             }
             return;
         }
@@ -116,47 +130,48 @@ public class VotingServerHandler extends SimpleChannelInboundHandler<String> {
         String[] parts = parseTokens(msg);
 
         if (parts.length == 0) {
-            ctx.writeAndFlush("Пустая команда.");
+            sendResponse(ctx, sender, "Пустая команда.");
             return;
         }
         String mainCommand = parts[0].toLowerCase();
 
         if (!mainCommand.equals("login") && !mainCommand.equals("exit") && currentUser == null) {
-            ctx.writeAndFlush("Ошибка: требуется авторизация. Используйте login -u=<username>");
+            sendResponse(ctx, sender, "Ошибка: требуется авторизация. Используйте login -u=<username>");
             return;
         }
 
         if (mainCommand.equals("exit")) {
-            handleExitCommand(ctx);
+            handleExitCommand(ctx, sender);
             return;
         }
 
         if (mainCommand.equals("vote")) {
             if (parts.length != 3 || !parts[1].startsWith("-t=") || !parts[2].startsWith("-v=")) {
-                ctx.writeAndFlush("Неверный формат. Используйте: vote -t=<topic> -v=<vote>");
+                sendResponse(ctx, sender, "Неверный формат. Используйте: vote -t=<topic> -v=<vote>");
                 return;
             }
-            commandMap.get("vote").execute(ctx, parts, this);
+            commandMap.get("vote").execute(ctx, parts, this, sender);
             return;
         }
+
         if (mainCommand.equals("create")) {
             if (parts.length >= 2) {
                 String subCommandType = parts[1].toLowerCase();
                 Command command = commandMap.get("create " + subCommandType);
                 if (command != null) {
-                    command.execute(ctx, parts, this);
+                    command.execute(ctx, parts, this, sender);
                 } else {
-                    ctx.writeAndFlush("Неверная команда create. Используйте: create topic или create vote");
+                    sendResponse(ctx, sender, "Неверная команда create. Используйте: create topic или create vote");
                 }
             } else {
-                ctx.writeAndFlush("Недостаточно аргументов. Используйте: create topic или create vote");
+                sendResponse(ctx, sender, "Недостаточно аргументов. Используйте: create topic или create vote");
             }
         } else {
             Command command = commandMap.get(mainCommand);
             if (command != null) {
-                command.execute(ctx, parts, this);
+                command.execute(ctx, parts, this, sender);
             } else {
-                ctx.writeAndFlush("Неизвестная команда.");
+                sendResponse(ctx, sender, "Неизвестная команда.");
             }
         }
     }

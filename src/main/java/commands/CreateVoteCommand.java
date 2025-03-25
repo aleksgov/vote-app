@@ -3,11 +3,17 @@ package commands;
 import io.netty.channel.ChannelHandlerContext;
 import server.VotingServerHandler;
 import server.VoteCreationManager;
+import java.net.InetSocketAddress;
 
 public class CreateVoteCommand implements Command {
 
     @Override
-    public void execute(ChannelHandlerContext ctx, String[] parts, VotingServerHandler handler) {
+    public void execute(
+            ChannelHandlerContext ctx,
+            String[] parts,
+            VotingServerHandler handler,
+            InetSocketAddress sender
+    ) {
         if (parts.length >= 3 && parts[1].equalsIgnoreCase("vote") && parts[2].startsWith("-t=")) {
 
             StringBuilder topicBuilder = new StringBuilder();
@@ -18,13 +24,13 @@ public class CreateVoteCommand implements Command {
             String topic = topicBuilder.toString().replaceFirst("-t=", "").trim();
 
             if (!VotingServerHandler.topics.containsKey(topic)) {
-                ctx.writeAndFlush("Раздел '" + topic + "' не найден.");
+                handler.sendResponse(ctx, sender, "Раздел '" + topic + "' не найден.");
                 return;
             }
             handler.setVoteCreationManager(new VoteCreationManager(topic, handler.getCurrentUser()));
-            ctx.writeAndFlush("Введите название голосования:");
+            handler.sendResponse(ctx, sender, "Введите название голосования:");
         } else {
-            ctx.writeAndFlush("Неверный формат команды. Используйте: create vote -t=\"<topic>\"");
+            handler.sendResponse(ctx, sender, "Неверный формат команды. Используйте: create vote -t=\"<topic>\"");
         }
     }
 }

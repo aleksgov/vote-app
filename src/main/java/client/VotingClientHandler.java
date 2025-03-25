@@ -2,12 +2,16 @@ package client;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.socket.DatagramPacket;
+import io.netty.util.CharsetUtil;
 
-public class VotingClientHandler extends SimpleChannelInboundHandler<String> {
+public class VotingClientHandler extends SimpleChannelInboundHandler<DatagramPacket>{
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, String msg) {
+    protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket packet) {
+        String msg = packet.content().toString(CharsetUtil.UTF_8);
         System.out.println("\nОтвет сервера: " + msg);
+        System.out.print("Введите команду: ");
 
         if (msg.trim().equalsIgnoreCase("Завершение работы программы.")) {
             System.out.println("Соединение закрыто.");

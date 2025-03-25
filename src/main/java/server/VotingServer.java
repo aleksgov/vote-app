@@ -1,12 +1,17 @@
 package server;
 
+import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.DatagramPacketDecoder;
+import io.netty.handler.codec.DatagramPacketEncoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
+import io.netty.util.CharsetUtil;
 
 import java.io.IOException;
 import java.util.Scanner;
@@ -26,7 +31,7 @@ public class VotingServer {
         if (args[0].equalsIgnoreCase("tcp")) {
             startTcpServer();
         } else if (args[0].equalsIgnoreCase("udp")) {
-            VotingUDPServer.start();
+            startUdpServer();
         } else {
             System.err.println("Invalid protocol. Use 'tcp' or 'udp'");
         }
@@ -129,4 +134,28 @@ public class VotingServer {
             workerGroup.shutdownGracefully();
         }
     }
+
+    private static void startUdpServer() throws InterruptedException {
+        EventLoopGroup group = new NioEventLoopGroup();
+        try {
+            Bootstrap b = new Bootstrap();
+            b.group(group)
+                    .channel(NioDatagramChannel.class)
+                    .handler(new ChannelInitializer<NioDatagramChannel>() {
+                        @Override
+                        protected void initChannel(NioDatagramChannel ch) {
+                            // Удаляем декодеры/энкодеры, оставляем только обработчик
+                            ch.pipeline().addLast(new VotingServerHandler());
+                        }
+                    })
+                    .option(ChannelOption.SO_BROADCAST, true);
+
+            ChannelFuture f = b.bind(8080).sync();
+            System.out.println("UDP-Сервер запущен на порту 8080");
+            f.channel().closeFuture().sync();
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
 }
