@@ -13,13 +13,26 @@
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <netty.version>4.1.119.Final</netty.version>
+        <jackson.version>2.16.1</jackson.version>
     </properties>
 
     <dependencies>
+        <!-- Netty -->
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
             <version>${netty.version}</version>
+        </dependency>
+        <!-- Jackson -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.16.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>2.16.1</version>
         </dependency>
     </dependencies>
 
@@ -38,6 +51,9 @@
                     <!-- TCP -->
                     <execution>
                         <id>run-server-tcp</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
                         <configuration>
                             <mainClass>server.VotingServer</mainClass>
                             <arguments>
@@ -47,6 +63,9 @@
                     </execution>
                     <execution>
                         <id>run-client-tcp</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
                         <configuration>
                             <mainClass>client.VotingClient</mainClass>
                             <arguments>
@@ -57,6 +76,9 @@
                     <!-- UDP -->
                     <execution>
                         <id>run-server-udp</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
                         <configuration>
                             <mainClass>server.VotingServer</mainClass>
                             <arguments>
@@ -66,6 +88,9 @@
                     </execution>
                     <execution>
                         <id>run-client-udp</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
                         <configuration>
                             <mainClass>client.VotingClient</mainClass>
                             <arguments>

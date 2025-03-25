@@ -15,9 +15,9 @@ import java.util.regex.Pattern;
 
 public class VotingServerHandler extends SimpleChannelInboundHandler<String> {
 
-    public static final Map<String, List<String>> topics = new ConcurrentHashMap<>();
-    public static final Map<String, List<Vote>> votesByTopic = new ConcurrentHashMap<>();
-    public static final Set<String> loggedUsers = ConcurrentHashMap.newKeySet();
+    public static volatile Map<String, List<String>> topics = new ConcurrentHashMap<>();
+    public static volatile Map<String, List<Vote>> votesByTopic = new ConcurrentHashMap<>();
+    public static volatile Set<String> loggedUsers = ConcurrentHashMap.newKeySet();
 
     private String currentUser = null;
     private VoteCreationManager voteCreationManager = null;
