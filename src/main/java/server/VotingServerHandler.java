@@ -140,39 +140,37 @@ public class VotingServerHandler extends SimpleChannelInboundHandler<DatagramPac
             return;
         }
 
-        if (mainCommand.equals("exit")) {
-            handleExitCommand(ctx, sender);
-            return;
-        }
-
-        if (mainCommand.equals("vote")) {
-            if (parts.length != 3 || !parts[1].startsWith("-t=") || !parts[2].startsWith("-v=")) {
-                sendResponse(ctx, sender, "Неверный формат. Используйте: vote -t=<topic> -v=<vote>");
-                return;
+        switch (mainCommand) {
+            case "exit" -> handleExitCommand(ctx, sender);
+            case "vote" -> {
+                if (parts.length != 3 || !parts[1].startsWith("-t=") || !parts[2].startsWith("-v=")) {
+                    sendResponse(ctx, sender, "Неверный формат. Используйте: vote -t=<topic> -v=<vote>");
+                    return;
+                }
+                commandMap.get("vote").execute(ctx, parts, this, sender);
             }
-            commandMap.get("vote").execute(ctx, parts, this, sender);
-            return;
-        }
-
-        if (mainCommand.equals("create")) {
-            if (parts.length >= 2) {
-                String subCommandType = parts[1].toLowerCase();
-                Command command = commandMap.get("create " + subCommandType);
+            case "create" -> {
+                if (parts.length >= 2) {
+                    String subCommandType = parts[1].toLowerCase();
+                    Command command = commandMap.get("create " + subCommandType);
+                    if (command != null) {
+                        command.execute(ctx, parts, this, sender);
+                    } else {
+                        sendResponse(ctx, sender, "Неверная команда create. Используйте: create topic или create vote");
+                    }
+                } else {
+                    sendResponse(ctx, sender, "Недостаточно аргументов. Используйте: create topic или create vote");
+                }
+            }
+            default -> {
+                Command command = commandMap.get(mainCommand);
                 if (command != null) {
                     command.execute(ctx, parts, this, sender);
                 } else {
-                    sendResponse(ctx, sender, "Неверная команда create. Используйте: create topic или create vote");
+                    sendResponse(ctx, sender, "Неизвестная команда.");
                 }
-            } else {
-                sendResponse(ctx, sender, "Недостаточно аргументов. Используйте: create topic или create vote");
-            }
-        } else {
-            Command command = commandMap.get(mainCommand);
-            if (command != null) {
-                command.execute(ctx, parts, this, sender);
-            } else {
-                sendResponse(ctx, sender, "Неизвестная команда.");
             }
         }
+
     }
 }
