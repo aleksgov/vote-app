@@ -1,12 +1,8 @@
 package server;
 
+import commands.*;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import commands.Command;
-import commands.CreateTopicCommand;
-import commands.CreateVoteCommand;
-import commands.ViewCommand;
-import commands.LoginCommand;
 
 import java.util.*;
 
@@ -26,6 +22,11 @@ public class VotingServerHandler extends SimpleChannelInboundHandler<String> {
         commandMap.put("view", new ViewCommand());
         commandMap.put("create topic", new CreateTopicCommand());
         commandMap.put("create vote", new CreateVoteCommand());
+        commandMap.put("delete", new DeleteVoteCommand());
+    }
+
+    public String getCurrentUser() {
+        return currentUser;
     }
 
     public void setCurrentUser(String currentUser) {

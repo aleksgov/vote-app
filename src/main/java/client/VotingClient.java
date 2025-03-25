@@ -41,9 +41,17 @@ public class VotingClient {
             while (true) {
                 String command = scanner.nextLine();
                 f.channel().writeAndFlush(command);
+
+                if ("exit".equalsIgnoreCase(command)) {
+                    System.out.println("Клиент отключается...");
+                    f.channel().close().sync();
+                    break;
+                }
+                System.out.print("Введите команду: ");
             }
         } finally {
             group.shutdownGracefully();
+            System.exit(0);
         }
     }
 }

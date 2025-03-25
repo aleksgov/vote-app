@@ -14,7 +14,7 @@ public class CreateVoteCommand implements Command {
                 ctx.writeAndFlush("Раздел '" + topic + "' не найден.");
                 return;
             }
-            handler.setVoteCreationManager(new VoteCreationManager(topic));
+            handler.setVoteCreationManager(new VoteCreationManager(topic, handler.getCurrentUser()));
             ctx.writeAndFlush("Введите название голосования:");
         } else {
             ctx.writeAndFlush("Неверный формат команды create vote. Используйте: create vote -t=<topic>");

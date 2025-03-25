@@ -9,11 +9,13 @@ public class Vote {
     private String description;
     private List<String> options;
     private Map<String, Integer> optionVotes;
+    private String creator;
 
-    public Vote(String title, String description, List<String> options) {
+    public Vote(String title, String description, List<String> options, String creator) {
         this.title = title;
         this.description = description;
         this.options = options;
+        this.creator = creator;
         this.optionVotes = new HashMap<>();
 
         for (String option : options) {
@@ -34,6 +36,11 @@ public class Vote {
     // Получение голосов для каждого варианта
     public Map<String, Integer> getOptionVotes() {
         return optionVotes;
+    }
+
+    // Получение создателя голосования
+    public String getCreator() {
+        return creator;
     }
 
     @Override

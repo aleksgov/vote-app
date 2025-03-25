@@ -13,9 +13,11 @@ public class VoteCreationManager {
     private int currentOptionCount;
     private List<String> voteOptions;
     private final String topic;
+    private final String creator;
 
-    public VoteCreationManager(String topic) {
+    public VoteCreationManager(String topic, String creator) {
         this.topic = topic;
+        this.creator = creator;
         this.step = 1;
         this.voteOptions = new ArrayList<>();
     }
@@ -54,7 +56,7 @@ public class VoteCreationManager {
                     ctx.writeAndFlush("Введите вариант ответа #" + (currentOptionCount + 1) + ":");
                 } else {
 
-                    Vote newVote = new Vote(voteTitle, voteDescription, voteOptions);
+                    Vote newVote = new Vote(voteTitle, voteDescription, voteOptions, creator);
                     callback.onVoteCreated(newVote, topic);
                     reset();
                 }
