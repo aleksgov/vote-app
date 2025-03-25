@@ -19,7 +19,7 @@ public class ViewCommand implements Command {
                         .append(entry.getValue().size())
                         .append(")\n");
             }
-            if (response.length() == 0) {
+            if (response.isEmpty()) {
                 ctx.writeAndFlush("Нет доступных разделов.");
             } else {
                 ctx.writeAndFlush(response.toString());
@@ -28,11 +28,14 @@ public class ViewCommand implements Command {
             String requestedTopic = parts[1].substring(3);
             List<String> topicVotes = VotingServerHandler.topics.get(requestedTopic);
             if (topicVotes != null) {
-                ctx.writeAndFlush("Раздел '" + requestedTopic + "' - голосов: " + topicVotes.size());
+                StringBuilder votesList = new StringBuilder();
+                topicVotes.forEach(vote -> votesList.append(vote).append("\n"));
+                ctx.writeAndFlush("Раздел '" + requestedTopic + "'\nГолосования:\n" + votesList);
             } else {
                 ctx.writeAndFlush("Раздел не найден.");
             }
         } else if (parts.length == 3 && parts[1].startsWith("-t=") && parts[2].startsWith("-v=")) {
+
             String requestedTopic = parts[1].substring(3);
             String requestedVote = parts[2].substring(3);
 

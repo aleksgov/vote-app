@@ -8,8 +8,15 @@ public class CreateVoteCommand implements Command {
 
     @Override
     public void execute(ChannelHandlerContext ctx, String[] parts, VotingServerHandler handler) {
-        if (parts.length == 3 && parts[2].startsWith("-t=")) {
-            String topic = parts[2].substring(3);
+        if (parts.length >= 3 && parts[1].equalsIgnoreCase("vote") && parts[2].startsWith("-t=")) {
+
+            StringBuilder topicBuilder = new StringBuilder();
+            for (int i = 2; i < parts.length; i++) {
+                String part = parts[i].replaceAll("^\"|\"$", "");
+                topicBuilder.append(part).append(" ");
+            }
+            String topic = topicBuilder.toString().replaceFirst("-t=", "").trim();
+
             if (!VotingServerHandler.topics.containsKey(topic)) {
                 ctx.writeAndFlush("Раздел '" + topic + "' не найден.");
                 return;
@@ -17,8 +24,7 @@ public class CreateVoteCommand implements Command {
             handler.setVoteCreationManager(new VoteCreationManager(topic, handler.getCurrentUser()));
             ctx.writeAndFlush("Введите название голосования:");
         } else {
-            ctx.writeAndFlush("Неверный формат команды create vote. Используйте: create vote -t=<topic>");
+            ctx.writeAndFlush("Неверный формат команды. Используйте: create vote -t=\"<topic>\"");
         }
     }
 }
-

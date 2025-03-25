@@ -10,6 +10,7 @@ public class Vote {
     private List<String> options;
     private Map<String, Integer> optionVotes;
     private String creator;
+    private Map<String, String> userVotes; // Хранит, кто за что проголосовал
 
     public Vote(String title, String description, List<String> options, String creator) {
         this.title = title;
@@ -17,30 +18,39 @@ public class Vote {
         this.options = options;
         this.creator = creator;
         this.optionVotes = new HashMap<>();
+        this.userVotes = new HashMap<>();
 
         for (String option : options) {
             optionVotes.put(option, 0);
         }
     }
 
-    // Получение названия голосования
     public String getTitle() {
         return title;
     }
 
-    // Получение описания голосования
     public String getDescription() {
         return description;
     }
 
-    // Получение голосов для каждого варианта
     public Map<String, Integer> getOptionVotes() {
         return optionVotes;
     }
 
-    // Получение создателя голосования
     public String getCreator() {
         return creator;
+    }
+
+    public boolean addVote(String option, String username) {
+        if (!optionVotes.containsKey(option)) {
+            return false;
+        }
+        if (userVotes.containsKey(username)) {
+            return false;
+        }
+        optionVotes.put(option, optionVotes.get(option) + 1);
+        userVotes.put(username, option);
+        return true;
     }
 
     @Override

@@ -11,13 +11,26 @@ import io.netty.handler.codec.string.StringEncoder;
 import java.util.Scanner;
 
 public class VotingClient {
-
     private static final String HOST = "localhost";
     private static final int PORT = 8080;
 
     public static void main(String[] args) throws InterruptedException {
-        EventLoopGroup group = new NioEventLoopGroup();
+        if (args.length < 1) {
+            System.err.println("Usage: VotingClient [tcp|udp]");
+            return;
+        }
 
+        if (args[0].equalsIgnoreCase("tcp")) {
+            startTcpClient();
+        } else if (args[0].equalsIgnoreCase("udp")) {
+            VotingUDPClient.start();
+        } else {
+            System.err.println("Неверный протокол. Используйте 'tcp' или 'udp'");
+        }
+    }
+
+    private static void startTcpClient() throws InterruptedException {
+        EventLoopGroup group = new NioEventLoopGroup();
         try {
             Bootstrap b = new Bootstrap();
             b.group(group)
@@ -39,19 +52,16 @@ public class VotingClient {
             Scanner scanner = new Scanner(System.in);
             System.out.print("Введите команду: ");
             while (true) {
-                String command = scanner.nextLine();
-                f.channel().writeAndFlush(command);
-
+                String command = scanner.nextLine().trim();
                 if ("exit".equalsIgnoreCase(command)) {
-                    System.out.println("Клиент отключается...");
+                    f.channel().writeAndFlush("exit").sync();
                     f.channel().close().sync();
                     break;
                 }
-                System.out.print("Введите команду: ");
+                f.channel().writeAndFlush(command);
             }
         } finally {
             group.shutdownGracefully();
-            System.exit(0);
         }
     }
 }

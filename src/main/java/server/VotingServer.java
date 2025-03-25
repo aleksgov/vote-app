@@ -9,8 +9,22 @@ import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 
 public class VotingServer {
-
     public static void main(String[] args) throws InterruptedException {
+        if (args.length < 1) {
+            System.err.println("Usage: VotingServer [tcp|udp]");
+            return;
+        }
+
+        if (args[0].equalsIgnoreCase("tcp")) {
+            startTcpServer();
+        } else if (args[0].equalsIgnoreCase("udp")) {
+            VotingUDPServer.start();
+        } else {
+            System.err.println("Invalid protocol. Use 'tcp' or 'udp'");
+        }
+    }
+
+    private static void startTcpServer() throws InterruptedException {
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
         EventLoopGroup workerGroup = new NioEventLoopGroup();
 
@@ -32,7 +46,7 @@ public class VotingServer {
                     .childOption(ChannelOption.SO_KEEPALIVE, true);
 
             ChannelFuture f = b.bind(8080).sync();
-            System.out.println("Сервер запущен на порту 8080");
+            System.out.println("TCP Server started on port 8080");
             f.channel().closeFuture().sync();
         } finally {
             bossGroup.shutdownGracefully();

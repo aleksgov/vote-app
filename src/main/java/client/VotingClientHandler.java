@@ -8,18 +8,25 @@ public class VotingClientHandler extends SimpleChannelInboundHandler<String> {
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, String msg) {
         System.out.println("\nОтвет сервера: " + msg);
-        if (!msg.trim().equals("Завершение работы программы.")) {
-            System.out.print("Введите команду: ");
-        } else {
+
+        if (msg.trim().equalsIgnoreCase("Завершение работы программы.")) {
+            System.out.println("Соединение закрыто.");
             ctx.close();
+        } else {
+            System.out.print("Введите команду: ");
         }
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         if (!(cause instanceof java.net.SocketException && cause.getMessage().contains("Connection reset"))) {
-            System.err.println("Произошла ошибка: " + cause.getMessage());
+            System.err.println("Ошибка соединения: " + cause.getMessage());
         }
         ctx.close();
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) {
+        System.out.println("\nСоединение с сервером разорвано.");
     }
 }
