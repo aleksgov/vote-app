@@ -44,6 +44,11 @@ public class DeleteVoteCommand implements Command {
 
             if (voteToRemove != null) {
                 votes.remove(voteToRemove);
+
+                List<String> topicVoteTitles = VotingServerHandler.topics.get(topic);
+                if (topicVoteTitles != null) {
+                    topicVoteTitles.removeIf(title -> title.equalsIgnoreCase(voteTitle));
+                }
                 handler.sendResponse(ctx, sender, "Голосование \"" + voteTitle + "\" удалено из темы \"" + topic + "\".");
             } else {
                 handler.sendResponse(ctx, sender, "Голосование не найдено или у вас нет прав на его удаление.");

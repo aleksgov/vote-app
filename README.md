@@ -1,4 +1,4 @@
-# vote-app
+# Vote-app
 
 Клиент-серверное приложение для создания и управления голосованиями с поддержкой TCP/UDP протоколов.
 
@@ -36,29 +36,29 @@
 
 ### Сборка проекта
 ```bash
-    mvn clean package
+mvn clean package
 ```
 
 ## Запуск сервера
 
 ### TCP-сервер:
 ```bash
-    mvn exec:java@run-server-tcp
+mvn exec:java@run-server-tcp
 ```
 
 ### UDP-сервер:
 ```bash
-    mvn exec:java@run-server-udp
+mvn exec:java@run-server-udp
 ```
 
 ## Запуск клиента
 
 ### TCP-клиент:
 ```bash
-    mvn exec:java@run-client-tcp
+mvn exec:java@run-client-tcp
 ```
 
 ### UDP-клиент:
 ```bash
-    mvn exec:java@run-client-udp
+mvn exec:java@run-client-udp
 ```

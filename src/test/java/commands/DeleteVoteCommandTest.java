@@ -1,15 +1,22 @@
 package commands;
 
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.socket.DatagramPacket;
+import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import server.Vote;
 import server.VotingServerHandler;
+
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
-import static org.mockito.Mockito.*;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.verify;
 
 class DeleteVoteCommandTest {
     @Mock
@@ -17,6 +24,7 @@ class DeleteVoteCommandTest {
 
     private DeleteVoteCommand command;
     private VotingServerHandler handler;
+    private InetSocketAddress sender;
 
     @BeforeEach
     void setUp() {
@@ -28,43 +36,69 @@ class DeleteVoteCommandTest {
         List<Vote> votes = new ArrayList<>();
         votes.add(new Vote("testVote", "description", List.of("Yes", "No"), "admin"));
         VotingServerHandler.votesByTopic.put("politics", votes);
+        sender = new InetSocketAddress("127.0.0.1", 8080);
     }
 
     @Test
     void testDeleteVoteSuccess() {
         handler.setCurrentUser("admin");
         String[] validCommand = {"delete", "-t=politics", "-v=testVote"};
-        command.execute(ctx, validCommand, handler);
-        verify(ctx).writeAndFlush("Голосование \"testVote\" удалено из темы \"politics\".");
+        command.execute(ctx, validCommand, handler, sender);
+
+        ArgumentCaptor<DatagramPacket> captor = ArgumentCaptor.forClass(DatagramPacket.class);
+        verify(ctx).writeAndFlush(captor.capture());
+        DatagramPacket packet = captor.getValue();
+        String actualMessage = packet.content().toString(CharsetUtil.UTF_8);
+        assertEquals("Голосование \"testVote\" удалено из темы \"politics\".", actualMessage);
     }
 
     @Test
     void testDeleteNonExistingTopic() {
         String[] invalidCommand = {"delete", "-t=fake", "-v=testVote"};
-        command.execute(ctx, invalidCommand, handler);
-        verify(ctx).writeAndFlush("Тема \"fake\" не найдена.");
+        command.execute(ctx, invalidCommand, handler, sender);
+
+        ArgumentCaptor<DatagramPacket> captor = ArgumentCaptor.forClass(DatagramPacket.class);
+        verify(ctx).writeAndFlush(captor.capture());
+        DatagramPacket packet = captor.getValue();
+        String actualMessage = packet.content().toString(CharsetUtil.UTF_8);
+        assertEquals("Тема \"fake\" не найдена.", actualMessage);
     }
 
     @Test
     void testDeleteWithoutLogin() {
         handler.setCurrentUser(null);
         String[] validCommand = {"delete", "-t=politics", "-v=testVote"};
-        command.execute(ctx, validCommand, handler);
-        verify(ctx).writeAndFlush("Вы должны войти в систему, чтобы удалить голосование.");
+        command.execute(ctx, validCommand, handler, sender);
+
+        ArgumentCaptor<DatagramPacket> captor = ArgumentCaptor.forClass(DatagramPacket.class);
+        verify(ctx).writeAndFlush(captor.capture());
+        DatagramPacket packet = captor.getValue();
+        String actualMessage = packet.content().toString(CharsetUtil.UTF_8);
+        assertEquals("Вы должны войти в систему, чтобы удалить голосование.", actualMessage);
     }
 
     @Test
     void testDeleteNotOwner() {
         handler.setCurrentUser("user");
         String[] validCommand = {"delete", "-t=politics", "-v=testVote"};
-        command.execute(ctx, validCommand, handler);
-        verify(ctx).writeAndFlush("Голосование не найдено или у вас нет прав на его удаление.");
+        command.execute(ctx, validCommand, handler, sender);
+
+        ArgumentCaptor<DatagramPacket> captor = ArgumentCaptor.forClass(DatagramPacket.class);
+        verify(ctx).writeAndFlush(captor.capture());
+        DatagramPacket packet = captor.getValue();
+        String actualMessage = packet.content().toString(CharsetUtil.UTF_8);
+        assertEquals("Голосование не найдено или у вас нет прав на его удаление.", actualMessage);
     }
 
     @Test
     void testInvalidCommandFormat() {
         String[] invalidCommand = {"delete", "wrong_format"};
-        command.execute(ctx, invalidCommand, handler);
-        verify(ctx).writeAndFlush("Неверный формат команды delete. Используйте: delete -t=topic -v=<vote>");
+        command.execute(ctx, invalidCommand, handler, sender);
+
+        ArgumentCaptor<DatagramPacket> captor = ArgumentCaptor.forClass(DatagramPacket.class);
+        verify(ctx).writeAndFlush(captor.capture());
+        DatagramPacket packet = captor.getValue();
+        String actualMessage = packet.content().toString(CharsetUtil.UTF_8);
+        assertEquals("Неверный формат команды delete. Используйте: delete -t=topic -v=<vote>", actualMessage);
     }
 }
