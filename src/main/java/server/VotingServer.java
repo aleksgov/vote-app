@@ -73,8 +73,8 @@ public class VotingServer {
     private static void saveState(String filename) {
         try {
             ServerState.saveToFile(filename, new ServerState(
-                    VotingServerHandler.topics,
-                    VotingServerHandler.votesByTopic
+                    UpdVotingServerHandler.topics,
+                    UpdVotingServerHandler.votesByTopic
             ));
             System.out.println("Сохранено в: " + filename);
         } catch (IOException e) {
@@ -85,10 +85,10 @@ public class VotingServer {
     private static void loadState(String filename) {
         try {
             ServerState state = ServerState.loadFromFile(filename);
-            VotingServerHandler.topics.clear();
-            VotingServerHandler.topics.putAll(state.getTopics());
-            VotingServerHandler.votesByTopic.clear();
-            VotingServerHandler.votesByTopic.putAll(state.getVotesByTopic());
+            UpdVotingServerHandler.topics.clear();
+            UpdVotingServerHandler.topics.putAll(state.getTopics());
+            UpdVotingServerHandler.votesByTopic.clear();
+            UpdVotingServerHandler.votesByTopic.putAll(state.getVotesByTopic());
 
             System.out.println("Загружено из: " + filename);
         } catch (IOException e) {
@@ -116,7 +116,7 @@ public class VotingServer {
                             ch.pipeline().addLast(
                                     new StringDecoder(),
                                     new StringEncoder(),
-                                    new VotingServerHandler()
+                                    new TcpVotingServerHandler()
                             );
                         }
                     })
@@ -141,7 +141,7 @@ public class VotingServer {
                     .handler(new ChannelInitializer<NioDatagramChannel>() {
                         @Override
                         protected void initChannel(NioDatagramChannel ch) {
-                            ch.pipeline().addLast(new VotingServerHandler());
+                            ch.pipeline().addLast(new UpdVotingServerHandler());
                         }
                     })
                     .option(ChannelOption.SO_BROADCAST, true);

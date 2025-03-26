@@ -27,7 +27,7 @@ public class VoteCreationManager {
             case 1:
                 voteTitle = msg.trim();
 
-                if (VotingServerHandler.topics.get(topic).contains(voteTitle)) {
+                if (UpdVotingServerHandler.topics.get(topic).contains(voteTitle)) {
                     ctx.writeAndFlush("Голосование с названием '" + voteTitle + "' уже существует!");
                     reset();
                     return;

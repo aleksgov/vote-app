@@ -6,33 +6,25 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.CharsetUtil;
-
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.HashMap;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class VotingServerHandler extends SimpleChannelInboundHandler<DatagramPacket> {
+public class UpdVotingServerHandler extends SimpleChannelInboundHandler<DatagramPacket> implements BaseVotingHandler {
 
-    public static volatile Map<String, List<String>> topics = new ConcurrentHashMap<>();
-    public static volatile Map<String, List<Vote>> votesByTopic = new ConcurrentHashMap<>();
-    public static volatile Set<String> loggedUsers = ConcurrentHashMap.newKeySet();
+    public static final Map<String, List<String>> topics = new ConcurrentHashMap<>();
+    public static final Map<String, List<Vote>> votesByTopic = new ConcurrentHashMap<>();
+    public static final Set<String> loggedUsers = ConcurrentHashMap.newKeySet();
 
     private String currentUser = null;
     private VoteCreationManager voteCreationManager = null;
     private final Map<String, Command> commandMap = new HashMap<>();
     private final Map<String, Vote> pendingVotes = new ConcurrentHashMap<>();
+    public InetSocketAddress lastSender;
 
-    public Map<String, Vote> getPendingVotes() {
-        return pendingVotes;
-    }
-
-    public VotingServerHandler() {
+    public UpdVotingServerHandler() {
         commandMap.put("login", new LoginCommand());
         commandMap.put("view", new ViewCommand());
         commandMap.put("create topic", new CreateTopicCommand());
@@ -41,16 +33,46 @@ public class VotingServerHandler extends SimpleChannelInboundHandler<DatagramPac
         commandMap.put("vote", new VoteCommand());
     }
 
+    @Override
+    public Map<String, List<String>> getTopics() {
+        return topics;
+    }
+
+    @Override
+    public Map<String, List<Vote>> getVotesByTopic() {
+        return votesByTopic;
+    }
+
+    @Override
+    public Map<String, Vote> getPendingVotes() {
+        return pendingVotes;
+    }
+
+    @Override
     public String getCurrentUser() {
         return currentUser;
     }
 
+    @Override
     public void setCurrentUser(String currentUser) {
         this.currentUser = currentUser;
     }
 
+    @Override
     public void setVoteCreationManager(VoteCreationManager manager) {
         this.voteCreationManager = manager;
+    }
+
+    @Override
+    public void sendResponse(ChannelHandlerContext ctx, String message) {
+        if (lastSender == null) {
+            System.err.println("Адрес клиента не установлен.");
+            return;
+        }
+        ctx.writeAndFlush(new DatagramPacket(
+                Unpooled.copiedBuffer(message, CharsetUtil.UTF_8),
+                lastSender
+        ));
     }
 
     private String[] parseTokens(String msg) {
@@ -72,19 +94,12 @@ public class VotingServerHandler extends SimpleChannelInboundHandler<DatagramPac
         return tokens.toArray(new String[0]);
     }
 
-    public void sendResponse(ChannelHandlerContext ctx, InetSocketAddress recipient, String message) {
-        ctx.writeAndFlush(new DatagramPacket(
-                Unpooled.copiedBuffer(message, CharsetUtil.UTF_8),
-                recipient
-        ));
-    }
-
     private void handleExitCommand(ChannelHandlerContext ctx, InetSocketAddress sender) {
         if (currentUser != null) {
             loggedUsers.remove(currentUser);
             currentUser = null;
         }
-        sendResponse(ctx, sender, "Завершение работы программы.");
+        sendResponse(ctx, "Завершение работы программы.");
         ctx.close();
     }
 
@@ -99,8 +114,8 @@ public class VotingServerHandler extends SimpleChannelInboundHandler<DatagramPac
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket packet) {
+        this.lastSender = packet.sender();
         String msg = packet.content().toString(CharsetUtil.UTF_8);
-        InetSocketAddress sender = packet.sender();
 
         if (voteCreationManager != null && voteCreationManager.isActive()) {
             voteCreationManager.processInput(ctx, msg, (vote, topic) -> {
@@ -109,7 +124,7 @@ public class VotingServerHandler extends SimpleChannelInboundHandler<DatagramPac
                     v.add(vote.getTitle());
                     return v;
                 });
-                sendResponse(ctx, sender, "Голосование создано: " + vote);
+                sendResponse(ctx, "Голосование создано: " + vote);
                 voteCreationManager = null;
             });
             return;
@@ -119,10 +134,10 @@ public class VotingServerHandler extends SimpleChannelInboundHandler<DatagramPac
             Vote pendingVote = pendingVotes.get(currentUser);
             if (pendingVote.getOptionVotes().containsKey(msg)) {
                 pendingVote.addVote(msg, currentUser);
-                sendResponse(ctx, sender, "Ваш голос учтен.");
+                sendResponse(ctx, "Ваш голос учтен.");
                 pendingVotes.remove(currentUser);
             } else {
-                sendResponse(ctx, sender, "Неизвестная команда.");
+                sendResponse(ctx, "Неизвестная команда.");
             }
             return;
         }
@@ -130,47 +145,52 @@ public class VotingServerHandler extends SimpleChannelInboundHandler<DatagramPac
         String[] parts = parseTokens(msg);
 
         if (parts.length == 0) {
-            sendResponse(ctx, sender, "Пустая команда.");
+            sendResponse(ctx, "Пустая команда.");
             return;
         }
         String mainCommand = parts[0].toLowerCase();
 
         if (!mainCommand.equals("login") && !mainCommand.equals("exit") && currentUser == null) {
-            sendResponse(ctx, sender, "Ошибка: требуется авторизация. Используйте login -u=<username>");
+            sendResponse(ctx, "Ошибка: требуется авторизация. Используйте login -u=<username>");
             return;
         }
 
         switch (mainCommand) {
-            case "exit" -> handleExitCommand(ctx, sender);
+            case "exit" -> handleExitCommand(ctx, lastSender);
             case "vote" -> {
                 if (parts.length != 3 || !parts[1].startsWith("-t=") || !parts[2].startsWith("-v=")) {
-                    sendResponse(ctx, sender, "Неверный формат. Используйте: vote -t=<topic> -v=<vote>");
+                    sendResponse(ctx, "Неверный формат. Используйте: vote -t=<topic> -v=<vote>");
                     return;
                 }
-                commandMap.get("vote").execute(ctx, parts, this, sender);
+                commandMap.get("vote").execute(ctx, parts, this);
             }
             case "create" -> {
                 if (parts.length >= 2) {
                     String subCommandType = parts[1].toLowerCase();
                     Command command = commandMap.get("create " + subCommandType);
                     if (command != null) {
-                        command.execute(ctx, parts, this, sender);
+                        command.execute(ctx, parts, this);
                     } else {
-                        sendResponse(ctx, sender, "Неверная команда create. Используйте: create topic или create vote");
+                        sendResponse(ctx, "Неверная команда create. Используйте: create topic или create vote");
                     }
                 } else {
-                    sendResponse(ctx, sender, "Недостаточно аргументов. Используйте: create topic или create vote");
+                    sendResponse(ctx, "Недостаточно аргументов. Используйте: create topic или create vote");
                 }
             }
             default -> {
                 Command command = commandMap.get(mainCommand);
                 if (command != null) {
-                    command.execute(ctx, parts, this, sender);
+                    command.execute(ctx, parts, this);
                 } else {
-                    sendResponse(ctx, sender, "Неизвестная команда.");
+                    sendResponse(ctx, "Неизвестная команда.");
                 }
             }
         }
+    }
 
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        cause.printStackTrace();
+        ctx.close();
     }
 }

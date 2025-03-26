@@ -5,7 +5,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.CharsetUtil;
 
-public class VotingClientHandler extends SimpleChannelInboundHandler<DatagramPacket>{
+public class VotingUpdClientHandler extends SimpleChannelInboundHandler<DatagramPacket> {
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket packet) {
@@ -16,8 +16,6 @@ public class VotingClientHandler extends SimpleChannelInboundHandler<DatagramPac
         if (msg.trim().equalsIgnoreCase("Завершение работы программы.")) {
             System.out.println("Соединение закрыто.");
             ctx.close();
-        } else {
-            System.out.print("Введите команду: ");
         }
     }
 

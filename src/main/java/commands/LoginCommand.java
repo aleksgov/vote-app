@@ -1,8 +1,7 @@
 package commands;
 
 import io.netty.channel.ChannelHandlerContext;
-import server.VotingServerHandler;
-import java.net.InetSocketAddress;
+import server.BaseVotingHandler;
 
 public class LoginCommand implements Command {
 
@@ -10,20 +9,18 @@ public class LoginCommand implements Command {
     public void execute(
             ChannelHandlerContext ctx,
             String[] parts,
-            VotingServerHandler handler,
-            InetSocketAddress sender
+            BaseVotingHandler handler
     ) {
         if (parts.length == 2 && parts[1].startsWith("-u=")) {
             String currentUser = parts[1].substring(3);
-            if (VotingServerHandler.loggedUsers.contains(currentUser)) {
-                handler.sendResponse(ctx, sender, "Пользователь уже вошёл в систему.");
+            if (handler.getCurrentUser() != null && handler.getCurrentUser().equals(currentUser)) {
+                handler.sendResponse(ctx, "Пользователь уже вошёл в систему.");
             } else {
-                VotingServerHandler.loggedUsers.add(currentUser);
                 handler.setCurrentUser(currentUser);
-                handler.sendResponse(ctx, sender, "Выполнен вход как " + currentUser);
+                handler.sendResponse(ctx, "Выполнен вход как " + currentUser);
             }
         } else {
-            handler.sendResponse(ctx, sender, "Неверный формат команды login. Используйте: login -u=имя");
+            handler.sendResponse(ctx, "Неверный формат команды login. Используйте: login -u=<aleks>");
         }
     }
 }

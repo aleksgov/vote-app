@@ -11,8 +11,6 @@ import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.util.CharsetUtil;
 import io.netty.channel.socket.nio.NioDatagramChannel;
-import io.netty.handler.codec.DatagramPacketEncoder;
-import io.netty.handler.codec.DatagramPacketDecoder;
 
 import java.net.InetSocketAddress;
 import java.util.Scanner;
@@ -42,22 +40,21 @@ public class VotingClient {
             Bootstrap b = new Bootstrap();
             b.group(group)
                     .channel(NioSocketChannel.class)
-                    .handler(new ChannelInitializer<NioDatagramChannel>() {
+                    .handler(new ChannelInitializer<SocketChannel>() {
                         @Override
-                        protected void initChannel(NioDatagramChannel ch) {
+                        protected void initChannel(SocketChannel ch) {
                             ch.pipeline().addLast(
-                                    new DatagramPacketDecoder(new StringDecoder(CharsetUtil.UTF_8)),
-                                    new DatagramPacketEncoder<>(new StringEncoder(CharsetUtil.UTF_8)),
-                                    new VotingClientHandler()
+                                    new StringDecoder(CharsetUtil.UTF_8),
+                                    new StringEncoder(CharsetUtil.UTF_8),
+                                    new VotingTcpClientHandler()
                             );
                         }
                     });
 
             ChannelFuture f = b.connect(HOST, PORT).sync();
             System.out.println("Клиент подключился к серверу на порту 8080");
-
-            Scanner scanner = new Scanner(System.in);
             System.out.print("Введите команду: ");
+            Scanner scanner = new Scanner(System.in);
             while (true) {
                 String command = scanner.nextLine().trim();
                 if ("exit".equalsIgnoreCase(command)) {
@@ -81,18 +78,16 @@ public class VotingClient {
                     .handler(new ChannelInitializer<NioDatagramChannel>() {
                         @Override
                         protected void initChannel(NioDatagramChannel ch) {
-                            // Удаляем декодеры/энкодеры для работы с DatagramPacket напрямую
-                            ch.pipeline().addLast(new VotingClientHandler());
+                            ch.pipeline().addLast(new VotingUpdClientHandler());
                         }
                     })
                     .option(ChannelOption.SO_BROADCAST, true);
 
             Channel channel = b.bind(0).sync().channel();
             System.out.println("UDP-Клиент подключен к серверу на порту 8080");
-
+            System.out.print("Введите команду: ");
             Scanner scanner = new Scanner(System.in);
             while (true) {
-                System.out.print("Введите команду: ");
                 String command = scanner.nextLine().trim();
                 if ("exit".equalsIgnoreCase(command)) {
                     break;
@@ -106,5 +101,4 @@ public class VotingClient {
             group.shutdownGracefully();
         }
     }
-
 }

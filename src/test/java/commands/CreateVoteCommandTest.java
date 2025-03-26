@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import server.VotingServerHandler;
+import server.UpdVotingServerHandler;
 
 import java.net.InetSocketAddress;
 
@@ -20,39 +20,39 @@ class CreateVoteCommandTest {
     private ChannelHandlerContext ctx;
 
     private CreateVoteCommand command;
-    private VotingServerHandler handler;
+    private UpdVotingServerHandler handler;
     private InetSocketAddress sender;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
         command = new CreateVoteCommand();
-        handler = new VotingServerHandler();
-        VotingServerHandler.topics.clear();
-        sender = new InetSocketAddress("127.0.0.1", 8080);
+        handler = new UpdVotingServerHandler();
+        handler.lastSender = new InetSocketAddress("127.0.0.1", 8080); // Установка lastSender
+        UpdVotingServerHandler.topics.clear();
     }
 
     @Test
     void testNonExistingTopic() {
+        handler.setCurrentUser("user");
         String[] parts = {"create", "vote", "-t=Economy"};
-        command.execute(ctx, parts, handler, sender);
+        command.execute(ctx, parts, handler);
 
         ArgumentCaptor<DatagramPacket> captor = ArgumentCaptor.forClass(DatagramPacket.class);
         verify(ctx).writeAndFlush(captor.capture());
-        DatagramPacket packet = captor.getValue();
-        String actualMessage = packet.content().toString(CharsetUtil.UTF_8);
+        String actualMessage = captor.getValue().content().toString(CharsetUtil.UTF_8);
         assertEquals("Раздел 'Economy' не найден.", actualMessage);
     }
 
     @Test
     void testInvalidCommandFormat() {
+        handler.setCurrentUser("user");
         String[] parts = {"create", "vote"};
-        command.execute(ctx, parts, handler, sender);
+        command.execute(ctx, parts, handler);
 
         ArgumentCaptor<DatagramPacket> captor = ArgumentCaptor.forClass(DatagramPacket.class);
         verify(ctx).writeAndFlush(captor.capture());
-        DatagramPacket packet = captor.getValue();
-        String actualMessage = packet.content().toString(CharsetUtil.UTF_8);
+        String actualMessage = captor.getValue().content().toString(CharsetUtil.UTF_8);
         assertEquals("Неверный формат команды. Используйте: create vote -t=\"<topic>\"", actualMessage);
     }
 }
